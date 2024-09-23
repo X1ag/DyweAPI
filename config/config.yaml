@@ -1,0 +1,8 @@
+// дефолт конфиг   
+server:
+  port: 8080
+
+ton:
+  mainnet_servers:
+    - "testnet.example.com:8080" // !!заглушка!!
+    - "dev.example.org:8443" // !!заглушка!!
