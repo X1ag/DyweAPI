@@ -111,35 +111,3 @@ func WriteFloorToFile(floorPrice float64, address string, fileName string) error
 
 	return nil
 }
-
-func GetCandleInfo(fileName string) (float64, float64, error) {
-	file, err := os.OpenFile(fileName, os.O_RDONLY, 0644)
-	if err != nil {
-		return 0, 0, err
-	}
-	defer file.Close()
-
-	var data []map[string]interface{}
-	if err := json.NewDecoder(file).Decode(&data); err != nil {
-		return 0, 0, err
-	}
-
-	if len(data) == 0 {
-		return 0, 0, fmt.Errorf("данные отсутствуют")
-	}
-
-	minPrice := data[0]["floorPrice"].(float64)
-	maxPrice := data[0]["floorPrice"].(float64)
-
-	for _, entry := range data {
-		price := entry["floorPrice"].(float64)
-		if price < minPrice {
-			minPrice = price
-		}
-		if price > maxPrice {
-			maxPrice = price
-		}
-	}
-
-	return minPrice, maxPrice, nil
-}

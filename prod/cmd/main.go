@@ -11,13 +11,26 @@ import (
 )
 
 func main() {
-	go nft.UpdateCandleData(nft.Market_Makers_CollectionAddress, "Market_Makers_floor_price_data.json", &nft.СandleDataMarketMakers)
-	go nft.UpdateCandleData(nft.Lost_Dogs_CollectionAddress, "Lost_Dogs_floor_price_data.json", &nft.СandleDataLostDogs)
+	go nft.UpdateCandleData(
+		nft.Market_Makers_CollectionAddress,
+		"Market_Makers_floor_price_data.json",
+		"Market_Makers_candle_data_5min.json",
+		"Market_Makers_candle_data_1hr.json",
+		&nft.СandleDataMarketMakers,
+		&nft.СandleDataMarketMakers,
+	)
+	go nft.UpdateCandleData(
+		nft.Lost_Dogs_CollectionAddress,
+		"Lost_Dogs_floor_price_data.json",
+		"Lost_Dogs_candle_data_5min.json",
+		"Lost_Dogs_candle_data_1hr.json",
+		&nft.СandleDataLostDogs,
+		&nft.СandleDataLostDogs,
+	)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
-
-	r.Get("/dywetrading/getAllHistory/{address}", handlers.HandleCandleData)
+	r.Get("/dywetrading/getAllHistory/{address}/{timeframe}", handlers.HandleCandleData)
 	r.Get("/dywetrading/getCollectionInfo/{address}", handlers.CollectionInfoHandler)
 
 	http.ListenAndServe(":8080", r)
