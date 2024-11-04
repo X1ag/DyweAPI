@@ -1,11 +1,15 @@
 package nft
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"prod/db"
 	"time"
+
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type CandleData struct {
@@ -27,20 +31,26 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 	var openPrice5Min, openPrice1Hr, closePrice5Min, closePrice1Hr float64
 	var startTime5Min, startTime1Hr time.Time
 
+	ctx := context.Background()
+
+	dbPool, err := db.NewClient(ctx, 3, db.StorageConfig{})
+	if err != nil {
+		log.Fatalf("Ошибка при создании пула соединений: %v", err)
+	}
+	defer dbPool.Close()
+
 	go func() {
 		for {
 			floorPrice, err := GetNFTCollectionFloor(address)
 			if err != nil {
 				log.Printf("Ошибка при получении floor price: %v", err)
 			} else {
-				// Update open and close prices for 5-minute data
 				if openPrice5Min == 0 {
 					openPrice5Min = floorPrice
 					startTime5Min = time.Now()
 				}
 				closePrice5Min = floorPrice
 
-				// Update open and close prices for 1-hour data
 				if openPrice1Hr == 0 {
 					openPrice1Hr = floorPrice
 					startTime1Hr = time.Now()
@@ -74,11 +84,11 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 				Close:     closePrice5Min,
 			}
 
-			if err := WriteCandleToFile(*candleData5Min, candleFile5Min); err != nil {
-				log.Printf("Ошибка при записи данных 5-минутной свечи в файл: %v", err)
+			if err := WriteCandleToDB(dbPool, *candleData5Min, address, "5m"); err != nil {
+				log.Printf("Ошибка при записи данных 5минутной свечи в файл: %v", err)
 			}
 
-			openPrice5Min = 0 // Reset for the next interval
+			openPrice5Min = 0
 		}
 	}()
 
@@ -101,25 +111,59 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 				Close:     closePrice1Hr,
 			}
 
-			if err := WriteCandleToFile(*candleData1Hr, candleFile1Hr); err != nil {
+			if err := WriteCandleToDB(dbPool, *candleData1Hr, address, "1h"); err != nil {
 				log.Printf("Ошибка при записи данных часовой свечи в файл: %v", err)
 			}
 
-			openPrice1Hr = 0 // Reset for the next interval
+			openPrice1Hr = 0
 		}
 	}()
 }
 
-func WriteCandleToFile(candle CandleData, fileName string) error {
-	file, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		return err
+func WriteCandleToDB(dbPool *pgxpool.Pool, candle CandleData, address, timeframe string) error {
+	var tableName string
+	switch address {
+	case "EQBDMXqg2YcGmMnn5_bXG63y-hh_YNV0dx-ylx-vL3v_WZt4":
+		if timeframe == "1h" {
+			tableName = "candlesHoursMarketMakers"
+		} else if timeframe == "5m" {
+			tableName = "candlesMinutesMarketMakers"
+		}
+	case "EQAl_hUCAeEv-fKtGxYtITAS6PPxuMRaQwHj0QAHeWe6ZSD0":
+		if timeframe == "1h" {
+			tableName = "candlesHoursLostDogs"
+		} else if timeframe == "5m" {
+			tableName = "candlesMinutesLostDogs"
+		}
+	default:
+		return fmt.Errorf("неизвестный адрес: %s", address)
 	}
-	defer file.Close()
 
-	encoder := json.NewEncoder(file)
-	if err := encoder.Encode(candle); err != nil {
-		return err
+	createTableQuery := fmt.Sprintf(`
+		CREATE TABLE IF NOT EXISTS %s (
+			startTime TIMESTAMP NOT NULL,
+			endTime TIMESTAMP NOT NULL,
+			lowPrice FLOAT NOT NULL,
+			highPrice FLOAT NOT NULL,
+			open FLOAT NOT NULL,
+			close FLOAT NOT NULL
+		);`, tableName)
+
+	_, err := dbPool.Exec(context.Background(), createTableQuery)
+	if err != nil {
+		return fmt.Errorf("ошибка создания таблицы: %v", err)
+	}
+
+	insertQuery := fmt.Sprintf(`
+		INSERT INTO %s (startTime, endTime, lowPrice, highPrice, open, close)
+		VALUES ($1, $2, $3, $4, $5, $6);`, tableName)
+
+	_, err = dbPool.Exec(context.Background(), insertQuery,
+		candle.StartTime, candle.EndTime, candle.LowPrice,
+		candle.HighPrice, candle.Open, candle.Close)
+
+	if err != nil {
+		return fmt.Errorf("ошибка вставки данных: %v", err)
 	}
 
 	return nil
@@ -155,30 +199,4 @@ func GetCandleInfo(fileName string) (float64, float64, error) {
 	}
 
 	return minPrice, maxPrice, nil
-}
-
-func ReadLastCandleFromFile(fileName string) (CandleData, error) {
-	var candle CandleData
-	file, err := os.Open(fileName)
-	if err != nil {
-		return candle, err
-	}
-	defer file.Close()
-
-	// Чтение всех данных файла и извлечение последней записи
-	var candles []CandleData
-	decoder := json.NewDecoder(file)
-	for decoder.More() {
-		var temp CandleData
-		if err := decoder.Decode(&temp); err != nil {
-			return candle, err
-		}
-		candles = append(candles, temp)
-	}
-
-	if len(candles) == 0 {
-		return candle, fmt.Errorf("no candle data found in file")
-	}
-	candle = candles[len(candles)-1]
-	return candle, nil
 }

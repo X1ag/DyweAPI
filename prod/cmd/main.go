@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-
 	"prod/internal/handlers"
 	"prod/internal/nft"
 
@@ -11,6 +10,7 @@ import (
 )
 
 func main() {
+
 	go nft.UpdateCandleData(
 		nft.Market_Makers_CollectionAddress,
 		"Market_Makers_floor_price_data.json",
