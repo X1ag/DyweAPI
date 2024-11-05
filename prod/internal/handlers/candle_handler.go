@@ -23,7 +23,6 @@ func HandleCandleData(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatalf("Ошибка при создании пула соединений: %v", err)
 	}
-	defer dbPool.Close()
 
 	var candleDataResponse nft.CandleData
 
@@ -40,7 +39,6 @@ func HandleCandleData(w http.ResponseWriter, r *http.Request) {
 func ReadLastCandleFromDB(ctx context.Context, dbPool *pgxpool.Pool, address string, timeframe string) (nft.CandleData, error) {
 	var candle nft.CandleData
 
-	// Определение SQL-запроса в зависимости от адреса и временного интервала
 	var query string
 	switch address {
 	case "EQBDMXqg2YcGmMnn5_bXG63y-hh_YNV0dx-ylx-vL3v_WZt4":
@@ -59,10 +57,8 @@ func ReadLastCandleFromDB(ctx context.Context, dbPool *pgxpool.Pool, address str
 		return candle, fmt.Errorf("неизвестный адрес: %s", address)
 	}
 
-	// Выполнение запроса
 	row := dbPool.QueryRow(ctx, query)
 
-	// Считывание данных в структуру candle
 	err := row.Scan(&candle.StartTime, &candle.EndTime, &candle.LowPrice, &candle.HighPrice, &candle.Open, &candle.Close)
 	if err != nil {
 		return candle, fmt.Errorf("ошибка считывания данных: %v", err)

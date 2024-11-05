@@ -13,8 +13,8 @@ import (
 )
 
 type CandleData struct {
-	StartTime string  `json:"startTime"`
-	EndTime   string  `json:"endTime"`
+	StartTime int64   `json:"startTime"`
+	EndTime   int64   `json:"endTime"`
 	LowPrice  float64 `json:"lowPrice"`
 	HighPrice float64 `json:"highPrice"`
 	Open      float64 `json:"open"`
@@ -33,11 +33,10 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 
 	ctx := context.Background()
 
-	dbPool, err := db.NewClient(ctx, 3, db.StorageConfig{})
+	dbPool, err := db.NewClient(ctx, 3, db.DefaultStorageConfig)
 	if err != nil {
 		log.Fatalf("Ошибка при создании пула соединений: %v", err)
 	}
-	defer dbPool.Close()
 
 	go func() {
 		for {
@@ -67,7 +66,7 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 
 	go func() {
 		for {
-			time.Sleep(5 * time.Minute)
+			time.Sleep(1 * time.Minute)
 
 			minPrice, maxPrice, err := GetCandleInfo(floorPriceFile)
 			if err != nil {
@@ -76,8 +75,8 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 			}
 
 			*candleData5Min = CandleData{
-				StartTime: fmt.Sprintf("%d", startTime5Min.Unix()),
-				EndTime:   fmt.Sprintf("%d", time.Now().Unix()),
+				StartTime: startTime5Min.Unix(),
+				EndTime:   time.Now().Unix(),
 				LowPrice:  minPrice,
 				HighPrice: maxPrice,
 				Open:      openPrice5Min,
@@ -85,7 +84,7 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 			}
 
 			if err := WriteCandleToDB(dbPool, *candleData5Min, address, "5m"); err != nil {
-				log.Printf("Ошибка при записи данных 5минутной свечи в файл: %v", err)
+				log.Printf("Ошибка при записи данных 5минутной свечи в bd: %v", err)
 			}
 
 			openPrice5Min = 0
@@ -103,8 +102,8 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 			}
 
 			*candleData1Hr = CandleData{
-				StartTime: fmt.Sprintf("%d", startTime1Hr.Unix()),
-				EndTime:   fmt.Sprintf("%d", time.Now().Unix()),
+				StartTime: startTime1Hr.Unix(),
+				EndTime:   time.Now().Unix(),
 				LowPrice:  minPrice,
 				HighPrice: maxPrice,
 				Open:      openPrice1Hr,
@@ -112,7 +111,7 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 			}
 
 			if err := WriteCandleToDB(dbPool, *candleData1Hr, address, "1h"); err != nil {
-				log.Printf("Ошибка при записи данных часовой свечи в файл: %v", err)
+				log.Printf("Ошибка при записи данных часовой свечи в bd: %v", err)
 			}
 
 			openPrice1Hr = 0
@@ -141,8 +140,8 @@ func WriteCandleToDB(dbPool *pgxpool.Pool, candle CandleData, address, timeframe
 
 	createTableQuery := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
-			startTime TIMESTAMP NOT NULL,
-			endTime TIMESTAMP NOT NULL,
+			startTime BIGINT NOT NULL,
+			endTime BIGINT NOT NULL,
 			lowPrice FLOAT NOT NULL,
 			highPrice FLOAT NOT NULL,
 			open FLOAT NOT NULL,

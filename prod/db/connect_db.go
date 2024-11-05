@@ -31,6 +31,14 @@ type StorageConfig struct {
 	Password string `json:"password"`
 }
 
+var DefaultStorageConfig = StorageConfig{
+	Host:     "localhost",
+	Port:     "5432",
+	Database: "postgres",
+	Username: "postgres",
+	Password: "zxcvB526",
+}
+
 func NewClient(ctx context.Context, maxAttempts int, sc StorageConfig) (pool *pgxpool.Pool, err error) {
 	dsn := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s", sc.Username, sc.Password, sc.Host, sc.Port, sc.Database)
 	err = DoWithTries(func() error {
