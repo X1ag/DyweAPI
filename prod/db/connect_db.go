@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgconn"
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/jackc/pgx/v5"
 )
 
 type Client interface {
@@ -36,7 +36,8 @@ var DefaultStorageConfig = StorageConfig{
 }
 
 func NewClient(ctx context.Context, maxAttempts int, sc StorageConfig) (pool *pgxpool.Pool, err error) {
-	dsn := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s", sc.Username, sc.Password, sc.Host, sc.Port, sc.Database)
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", sc.Username, sc.Password, sc.Host, sc.Port, sc.Database)
+	fmt.Printf("Подключение к БД с DSN: %s\n", dsn)
 	err = DoWithTries(func() error {
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
@@ -50,22 +51,27 @@ func NewClient(ctx context.Context, maxAttempts int, sc StorageConfig) (pool *pg
 	}, maxAttempts, 5*time.Second)
 
 	if err != nil {
-		log.Fatal("error do with tries postgresql")
+		log.Printf("Ошибка при подключении: %v", err)
+
+	}
+	if pool == nil {
+		return nil, fmt.Errorf("не удалось создать pool соединений")
 	}
 
 	return pool, nil
 }
 
-func DoWithTries(fn func() error, attempts int, delay time.Duration) (err error) {
-	for attempts > 0 {
+func DoWithTries(fn func() error, attemtps int, delay time.Duration) (err error) {
+	for attemtps > 0 {
 		if err = fn(); err != nil {
-			attempts--
-			if attempts > 0 {
-				time.Sleep(delay)
-			}
+			time.Sleep(delay)
+			attemtps--
+
 			continue
 		}
+
 		return nil
 	}
-	return err // возвращаем ошибку, если все попытки исчерпаны
+
+	return
 }

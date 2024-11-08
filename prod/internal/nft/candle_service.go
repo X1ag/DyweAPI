@@ -139,29 +139,26 @@ func WriteCandleToDB(dbPool *pgxpool.Pool, candle CandleData, address, timeframe
 	}
 
 	createTableQuery := fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %s (
-			startTime TIMESTAMP NOT NULL,
-			endTime TIMESTAMP NOT NULL,
-			lowPrice FLOAT NOT NULL,
-			highPrice FLOAT NOT NULL,
-			open FLOAT NOT NULL,
-			close FLOAT NOT NULL
-		);`, tableName)
+	CREATE TABLE IF NOT EXISTS %s (
+		startTime BIGINT NOT NULL,
+		endTime BIGINT NOT NULL,
+		lowPrice FLOAT NOT NULL,
+		highPrice FLOAT NOT NULL,
+		open FLOAT NOT NULL,
+		close FLOAT NOT NULL
+	);`, tableName)
 
 	_, err := dbPool.Exec(context.Background(), createTableQuery)
 	if err != nil {
 		return fmt.Errorf("ошибка создания таблицы: %v", err)
 	}
 
-	startTime := time.Unix(candle.StartTime, 0)
-	endTime := time.Unix(candle.EndTime, 0)
-
 	insertQuery := fmt.Sprintf(`
-		INSERT INTO %s (startTime, endTime, lowPrice, highPrice, open, close)
-		VALUES ($1, $2, $3, $4, $5, $6);`, tableName)
+	INSERT INTO %s (startTime, endTime, lowPrice, highPrice, open, close)
+	VALUES ($1, $2, $3, $4, $5, $6);`, tableName)
 
 	_, err = dbPool.Exec(context.Background(), insertQuery,
-		startTime, endTime, candle.LowPrice,
+		candle.StartTime, candle.EndTime, candle.LowPrice,
 		candle.HighPrice, candle.Open, candle.Close)
 
 	if err != nil {
