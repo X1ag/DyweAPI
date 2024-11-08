@@ -19,10 +19,6 @@ type Client interface {
 	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
 }
 
-type Config struct {
-	Storage StorageConfig `yaml:"storage"`
-}
-
 type StorageConfig struct {
 	Host     string `json:"host"`
 	Port     string `json:"port"`
@@ -60,17 +56,16 @@ func NewClient(ctx context.Context, maxAttempts int, sc StorageConfig) (pool *pg
 	return pool, nil
 }
 
-func DoWithTries(fn func() error, attemps int, delay time.Duration) (err error) {
-	for attemps > 0 { //mb attemps < 0
+func DoWithTries(fn func() error, attempts int, delay time.Duration) (err error) {
+	for attempts > 0 {
 		if err = fn(); err != nil {
-			time.Sleep(delay)
-			attemps--
-
+			attempts--
+			if attempts > 0 {
+				time.Sleep(delay)
+			}
 			continue
 		}
-
 		return nil
 	}
-
-	return
+	return err // возвращаем ошибку, если все попытки исчерпаны
 }
