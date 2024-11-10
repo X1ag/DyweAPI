@@ -33,5 +33,5 @@ func main() {
 	r.Get("/dywetrading/getAllHistory/{address}/{timeframe}", handlers.HandleCandleData)
 	r.Get("/dywetrading/getCollectionInfo/{address}", handlers.CollectionInfoHandler)
 
-	http.ListenAndServe(":8080", r)
+	http.ListenAndServe(":5000", r)
 }

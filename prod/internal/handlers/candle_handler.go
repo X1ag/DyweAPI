@@ -4,14 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"prod/db"
 	"prod/internal/nft"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
@@ -31,9 +29,9 @@ func HandleCandleData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	candleDataResponse, err := ReadLastCandleFromDB(ctx, dbPool, address, timeframe)
+	candleDataResponse, err := ReadAllCandlesFromDB(ctx, dbPool, address, timeframe)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Ошибка при чтении данных свечи: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Ошибка при чтении данных свечей: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -43,8 +41,8 @@ func HandleCandleData(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func ReadLastCandleFromDB(ctx context.Context, dbPool *pgxpool.Pool, address string, timeframe string) (nft.CandleData, error) {
-	var candle nft.CandleData
+func ReadAllCandlesFromDB(ctx context.Context, dbPool *pgxpool.Pool, address string, timeframe string) ([]nft.CandleData, error) {
+	var candles []nft.CandleData
 	var query string
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -53,30 +51,37 @@ func ReadLastCandleFromDB(ctx context.Context, dbPool *pgxpool.Pool, address str
 	switch address {
 	case "EQBDMXqg2YcGmMnn5_bXG63y-hh_YNV0dx-ylx-vL3v_WZt4":
 		if timeframe == "1h" {
-			query = "SELECT startTime, endTime, lowPrice, highPrice, open, close FROM candlesHoursMarketMakers ORDER BY endTime DESC LIMIT 1;"
+			query = "SELECT openTime, closeTime, lowPrice, highPrice, open, close FROM candlesHoursMarketMakers ORDER BY closeTime;"
 		} else if timeframe == "5m" {
-			query = "SELECT startTime, endTime, lowPrice, highPrice, open, close FROM candlesMinutesMarketMakers ORDER BY endTime DESC LIMIT 1;"
+			query = "SELECT openTime, closeTime, lowPrice, highPrice, open, close FROM candlesMinutesMarketMakers ORDER BY closeTime;"
 		}
 	case "EQAl_hUCAeEv-fKtGxYtITAS6PPxuMRaQwHj0QAHeWe6ZSD0":
 		if timeframe == "1h" {
-			query = "SELECT startTime, endTime, lowPrice, highPrice, open, close FROM candlesHoursLostDogs ORDER BY endTime DESC LIMIT 1;"
+			query = "SELECT openTime, closeTime, lowPrice, highPrice, open, close FROM candlesHoursLostDogs ORDER BY closeTime;"
 		} else if timeframe == "5m" {
-			query = "SELECT startTime, endTime, lowPrice, highPrice, open, close FROM candlesMinutesLostDogs ORDER BY endTime DESC LIMIT 1;"
+			query = "SELECT openTime, closeTime, lowPrice, highPrice, open, close FROM candlesMinutesLostDogs ORDER BY closeTime;"
 		}
 	default:
-		return candle, fmt.Errorf("неизвестный адрес: %s", address)
+		return candles, fmt.Errorf("неизвестный адрес: %s", address)
 	}
 
-	row := dbPool.QueryRow(ctx, query)
-
-	err := row.Scan(&candle.StartTime, &candle.EndTime, &candle.LowPrice, &candle.HighPrice, &candle.Open, &candle.Close)
+	rows, err := dbPool.Query(ctx, query)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			log.Printf("Запись не найдена для адреса %s и временного интервала %s", address, timeframe)
-			return candle, nil 
-		}
+		return nil, fmt.Errorf("ошибка выполнения запроса: %v", err)
+	}
+	defer rows.Close()
 
+	for rows.Next() {
+		var candle nft.CandleData
+		if err := rows.Scan(&candle.OpenTime, &candle.CloseTime, &candle.LowPrice, &candle.HighPrice, &candle.Open, &candle.Close); err != nil {
+			return nil, fmt.Errorf("ошибка чтения данных свечи: %v", err)
+		}
+		candles = append(candles, candle)
 	}
 
-	return candle, nil
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("ошибка обработки строк результата: %v", rows.Err())
+	}
+
+	return candles, nil
 }

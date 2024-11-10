@@ -13,8 +13,8 @@ import (
 )
 
 type CandleData struct {
-	StartTime int64   `json:"startTime"`
-	EndTime   int64   `json:"endTime"`
+	OpenTime  int64   `json:"openTime"`
+	CloseTime int64   `json:"closeTime"`
 	LowPrice  float64 `json:"lowPrice"`
 	HighPrice float64 `json:"highPrice"`
 	Open      float64 `json:"open"`
@@ -27,9 +27,30 @@ var СandleDataLostDogs CandleData
 var Market_Makers_CollectionAddress = "EQBDMXqg2YcGmMnn5_bXG63y-hh_YNV0dx-ylx-vL3v_WZt4"
 var Lost_Dogs_CollectionAddress = "EQAl_hUCAeEv-fKtGxYtITAS6PPxuMRaQwHj0QAHeWe6ZSD0"
 
+var tableMapping = map[string]map[string]string{
+	"EQBDMXqg2YcGmMnn5_bXG63y-hh_YNV0dx-ylx-vL3v_WZt4": {
+		"1h": "candlesHoursMarketMakers",
+		"5m": "candlesMinutesMarketMakers",
+	},
+	"EQAl_hUCAeEv-fKtGxYtITAS6PPxuMRaQwHj0QAHeWe6ZSD0": {
+		"1h": "candlesHoursLostDogs",
+		"5m": "candlesMinutesLostDogs",
+	},
+}
+
+func getTableName(address, timeframe string) (string, error) {
+	if timeframeMap, ok := tableMapping[address]; ok {
+		if tableName, ok := timeframeMap[timeframe]; ok {
+			return tableName, nil
+		}
+		return "", fmt.Errorf("неизвестный временной интервал: %s", timeframe)
+	}
+	return "", fmt.Errorf("неизвестный адрес: %s", address)
+}
+
 func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr string, candleData5Min, candleData1Hr *CandleData) {
 	var openPrice5Min, openPrice1Hr, closePrice5Min, closePrice1Hr float64
-	var startTime5Min, startTime1Hr time.Time
+	var openTime5Min, openTime1Hr time.Time
 
 	ctx := context.Background()
 
@@ -46,13 +67,13 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 			} else {
 				if openPrice5Min == 0 {
 					openPrice5Min = floorPrice
-					startTime5Min = time.Now()
+					openTime5Min = time.Now()
 				}
 				closePrice5Min = floorPrice
 
 				if openPrice1Hr == 0 {
 					openPrice1Hr = floorPrice
-					startTime1Hr = time.Now()
+					openTime1Hr = time.Now()
 				}
 				closePrice1Hr = floorPrice
 
@@ -75,8 +96,8 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 			}
 
 			*candleData5Min = CandleData{
-				StartTime: startTime5Min.Unix(),
-				EndTime:   time.Now().Unix(),
+				OpenTime:  openTime5Min.Unix(),
+				CloseTime: time.Now().Unix(),
 				LowPrice:  minPrice,
 				HighPrice: maxPrice,
 				Open:      openPrice5Min,
@@ -85,6 +106,8 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 
 			if err := WriteCandleToDB(dbPool, *candleData5Min, address, "5m"); err != nil {
 				log.Printf("Ошибка при записи данных 5минутной свечи в bd: %v", err)
+			} else {
+				log.Println("Данные 5 мин свечи успешно записаны в bd")
 			}
 
 			openPrice5Min = 0
@@ -102,8 +125,8 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 			}
 
 			*candleData1Hr = CandleData{
-				StartTime: startTime1Hr.Unix(),
-				EndTime:   time.Now().Unix(),
+				OpenTime:  openTime1Hr.Unix(),
+				CloseTime: time.Now().Unix(),
 				LowPrice:  minPrice,
 				HighPrice: maxPrice,
 				Open:      openPrice1Hr,
@@ -112,6 +135,8 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 
 			if err := WriteCandleToDB(dbPool, *candleData1Hr, address, "1h"); err != nil {
 				log.Printf("Ошибка при записи данных часовой свечи в bd: %v", err)
+			} else {
+				log.Println("Данные часовой свечи успешно записаны в bd")
 			}
 
 			openPrice1Hr = 0
@@ -120,45 +145,34 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 }
 
 func WriteCandleToDB(dbPool *pgxpool.Pool, candle CandleData, address, timeframe string) error {
-	var tableName string
-	switch address {
-	case "EQBDMXqg2YcGmMnn5_bXG63y-hh_YNV0dx-ylx-vL3v_WZt4":
-		if timeframe == "1h" {
-			tableName = "candlesHoursMarketMakers"
-		} else if timeframe == "5m" {
-			tableName = "candlesMinutesMarketMakers"
-		}
-	case "EQAl_hUCAeEv-fKtGxYtITAS6PPxuMRaQwHj0QAHeWe6ZSD0":
-		if timeframe == "1h" {
-			tableName = "candlesHoursLostDogs"
-		} else if timeframe == "5m" {
-			tableName = "candlesMinutesLostDogs"
-		}
-	default:
-		return fmt.Errorf("неизвестный адрес: %s", address)
+	tableName, err := getTableName(address, timeframe)
+	if err != nil {
+		return err
 	}
 
+	// Запрос на создание таблицы, если она не существует
 	createTableQuery := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS %s (
-		startTime BIGINT NOT NULL,
-		endTime BIGINT NOT NULL,
+		openTime BIGINT NOT NULL,
+		closeTime BIGINT NOT NULL,
 		lowPrice FLOAT NOT NULL,
 		highPrice FLOAT NOT NULL,
 		open FLOAT NOT NULL,
 		close FLOAT NOT NULL
 	);`, tableName)
 
-	_, err := dbPool.Exec(context.Background(), createTableQuery)
+	_, err = dbPool.Exec(context.Background(), createTableQuery)
 	if err != nil {
 		return fmt.Errorf("ошибка создания таблицы: %v", err)
 	}
 
+	// Запрос на вставку новых данных
 	insertQuery := fmt.Sprintf(`
-	INSERT INTO %s (startTime, endTime, lowPrice, highPrice, open, close)
+	INSERT INTO %s (openTime, closeTime, lowPrice, highPrice, open, close)
 	VALUES ($1, $2, $3, $4, $5, $6);`, tableName)
 
 	_, err = dbPool.Exec(context.Background(), insertQuery,
-		candle.StartTime, candle.EndTime, candle.LowPrice,
+		candle.OpenTime, candle.CloseTime, candle.LowPrice,
 		candle.HighPrice, candle.Open, candle.Close)
 
 	if err != nil {
