@@ -21,20 +21,26 @@ type CandleData struct {
 	Close     float64 `json:"close"`
 }
 
-var СandleDataMarketMakers CandleData
-var СandleDataLostDogs CandleData
+var СandleDataTelegramUsernames CandleData
+var СandleDataAnonymousTelegramNumbers CandleData
+var СandleDataTONDNSDomains CandleData
 
-var Market_Makers_CollectionAddress = "EQBDMXqg2YcGmMnn5_bXG63y-hh_YNV0dx-ylx-vL3v_WZt4"
-var Lost_Dogs_CollectionAddress = "EQAl_hUCAeEv-fKtGxYtITAS6PPxuMRaQwHj0QAHeWe6ZSD0"
+var Telegram_Usernames_CollectionAddress = "EQCA14o1-VWhS2efqoh_9M1b_A9DtKTuoqfmkn83AbJzwnPi"
+var Anonymous_Telegram_Numbers_CollectionAddress = "EQAOQdwdw8kGftJCSFgOErM1mBjYPe4DBPq8-AhF6vr9si5N"
+var TON_DNSDomains_CollectionAddress = "EQC3dNlesgVD8YbAazcauIrXBPfiVhMMr5YYk2in0Mtsz0Bz"
 
 var tableMapping = map[string]map[string]string{
-	"EQBDMXqg2YcGmMnn5_bXG63y-hh_YNV0dx-ylx-vL3v_WZt4": {
-		"1h": "candlesHoursMarketMakers",
-		"5m": "candlesMinutesMarketMakers",
+	"EQCA14o1-VWhS2efqoh_9M1b_A9DtKTuoqfmkn83AbJzwnPi": {
+		"1h": "candlesHoursTelegramUsernamess",
+		"5m": "candlesMinutesTelegramUsernames",
 	},
-	"EQAl_hUCAeEv-fKtGxYtITAS6PPxuMRaQwHj0QAHeWe6ZSD0": {
-		"1h": "candlesHoursLostDogs",
-		"5m": "candlesMinutesLostDogs",
+	"EQAOQdwdw8kGftJCSFgOErM1mBjYPe4DBPq8-AhF6vr9si5N": {
+		"1h": "candlesHoursAnonymousTelegramNumbers",
+		"5m": "candlesMinutesAnonymousTelegramNumbers",
+	},
+	"EQC3dNlesgVD8YbAazcauIrXBPfiVhMMr5YYk2in0Mtsz0Bz": {
+		"1h": "candlesHoursTONDNSDomains",
+		"5m": "candlesMinutesTONDNSDomains",
 	},
 }
 

@@ -49,17 +49,23 @@ func ReadAllCandlesFromDB(ctx context.Context, dbPool *pgxpool.Pool, address str
 	defer cancel()
 
 	switch address {
-	case "EQBDMXqg2YcGmMnn5_bXG63y-hh_YNV0dx-ylx-vL3v_WZt4":
+	case "EQCA14o1-VWhS2efqoh_9M1b_A9DtKTuoqfmkn83AbJzwnPi":
 		if timeframe == "1h" {
-			query = "SELECT openTime, closeTime, lowPrice, highPrice, open, close FROM candlesHoursMarketMakers ORDER BY closeTime;"
+			query = "SELECT openTime, closeTime, lowPrice, highPrice, open, close FROM candlesHoursTelegramUsernames ORDER BY closeTime;"
 		} else if timeframe == "5m" {
-			query = "SELECT openTime, closeTime, lowPrice, highPrice, open, close FROM candlesMinutesMarketMakers ORDER BY closeTime;"
+			query = "SELECT openTime, closeTime, lowPrice, highPrice, open, close FROM candlesMinutesTelegramUsernames ORDER BY closeTime;"
 		}
-	case "EQAl_hUCAeEv-fKtGxYtITAS6PPxuMRaQwHj0QAHeWe6ZSD0":
+	case "EQAOQdwdw8kGftJCSFgOErM1mBjYPe4DBPq8-AhF6vr9si5N":
 		if timeframe == "1h" {
-			query = "SELECT openTime, closeTime, lowPrice, highPrice, open, close FROM candlesHoursLostDogs ORDER BY closeTime;"
+			query = "SELECT openTime, closeTime, lowPrice, highPrice, open, close FROM candlesHoursAnonymousTelegramNumbers ORDER BY closeTime;"
 		} else if timeframe == "5m" {
-			query = "SELECT openTime, closeTime, lowPrice, highPrice, open, close FROM candlesMinutesLostDogs ORDER BY closeTime;"
+			query = "SELECT openTime, closeTime, lowPrice, highPrice, open, close FROM candlesMinutesAnonymousTelegramNumbers ORDER BY closeTime;"
+		}
+	case "EQC3dNlesgVD8YbAazcauIrXBPfiVhMMr5YYk2in0Mtsz0Bz":
+		if timeframe == "1h" {
+			query = "SELECT openTime, closeTime, lowPrice, highPrice, open, close FROM candlesHoursTONDNSDomains ORDER BY closeTime;"
+		} else if timeframe == "5m" {
+			query = "SELECT openTime, closeTime, lowPrice, highPrice, open, close FROM candlesMinutesTONDNSDomains ORDER BY closeTime;"
 		}
 	default:
 		return candles, fmt.Errorf("неизвестный адрес: %s", address)

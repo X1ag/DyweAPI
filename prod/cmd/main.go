@@ -12,20 +12,28 @@ import (
 func main() {
 
 	go nft.UpdateCandleData(
-		nft.Market_Makers_CollectionAddress,
-		"Market_Makers_floor_price_data.json",
-		"Market_Makers_candle_data_5min.json",
-		"Market_Makers_candle_data_1hr.json",
-		&nft.СandleDataMarketMakers,
-		&nft.СandleDataMarketMakers,
+		nft.Telegram_Usernames_CollectionAddress,
+		"Telegram_Usernames_floor_price_data.json",
+		"Telegram_Usernames_candle_data_5min.json",
+		"Telegram_Usernames_candle_data_1hr.json",
+		&nft.СandleDataTelegramUsernames,
+		&nft.СandleDataTelegramUsernames,
 	)
 	go nft.UpdateCandleData(
-		nft.Lost_Dogs_CollectionAddress,
-		"Lost_Dogs_floor_price_data.json",
-		"Lost_Dogs_candle_data_5min.json",
-		"Lost_Dogs_candle_data_1hr.json",
-		&nft.СandleDataLostDogs,
-		&nft.СandleDataLostDogs,
+		nft.Anonymous_Telegram_Numbers_CollectionAddress,
+		"Anonymous_Telegram_Numbers_floor_price_data.json",
+		"Anonymous_Telegram_Numbers_data_5min.json",
+		"Anonymous_Telegram_Numbers_candle_data_1hr.json",
+		&nft.СandleDataAnonymousTelegramNumbers,
+		&nft.СandleDataAnonymousTelegramNumbers,
+	)
+	go nft.UpdateCandleData(
+		nft.TON_DNSDomains_CollectionAddress,
+		"TON_DNSDomains_floor_price_data.json",
+		"TON_DNSDomains_data_5min.json",
+		"TON_DNSDomains_candle_data_1hr.json",
+		&nft.СandleDataTONDNSDomains,
+		&nft.СandleDataTONDNSDomains,
 	)
 
 	r := chi.NewRouter()
