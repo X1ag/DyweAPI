@@ -4,14 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/joho/godotenv"
 )
 
 type Client interface {
@@ -22,24 +19,24 @@ type Client interface {
 	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
 }
 
-var loadEnvOnce sync.Once
+// var loadEnvOnce sync.Once
 
-func GetEnv(key string) string {
-	loadEnvOnce.Do(func() {
-		err := godotenv.Load()
-		if err != nil {
-			log.Printf("Ошибка загрузки .env: %v", err)
-		}
-	})
-	return os.Getenv(key)
-}
+// func GetEnv(key string) string {
+// 	loadEnvOnce.Do(func() {
+// 		err := godotenv.Load()
+// 		if err != nil {
+// 			log.Printf("Ошибка загрузки .env: %v", err)
+// 		}
+// 	})
+// 	return os.Getenv(key)
+// }
 
 var DefaultStorageConfig = StorageConfig{
-	Host:     GetEnv("HOST"),
-	Port:     GetEnv("PORT"),
-	Database: GetEnv("DATABASE"),
-	Username: GetEnv("USERNAME"),
-	Password: GetEnv("PASSWORD"),
+	Host:     "localhost",
+	Port:     "5432",
+	Database: "postgres",
+	Username: "postgres",
+	Password: "zxcvB526",
 }
 
 type StorageConfig struct {

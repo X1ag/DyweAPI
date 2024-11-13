@@ -2,10 +2,8 @@ package nft
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"prod/db"
 	"time"
 
@@ -31,7 +29,7 @@ var TON_DNSDomains_CollectionAddress = "EQC3dNlesgVD8YbAazcauIrXBPfiVhMMr5YYk2in
 
 var tableMapping = map[string]map[string]string{
 	"EQCA14o1-VWhS2efqoh_9M1b_A9DtKTuoqfmkn83AbJzwnPi": {
-		"1h": "candlesHoursTelegramUsernamess",
+		"1h": "candlesHoursTelegramUsernames",
 		"5m": "candlesMinutesTelegramUsernames",
 	},
 	"EQAOQdwdw8kGftJCSFgOErM1mBjYPe4DBPq8-AhF6vr9si5N": {
@@ -83,8 +81,8 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 				}
 				closePrice1Hr = floorPrice
 
-				if err := WriteFloorToFile(floorPrice, address, floorPriceFile); err != nil {
-					log.Printf("Ошибка при записи в файл: %v", err)
+				if err := WriteFloorToArray(floorPrice, address, floorPriceFile); err != nil {
+					log.Printf("Ошибка при записи в массив: %v", err)
 				}
 			}
 			time.Sleep(20 * time.Second)
@@ -95,7 +93,7 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 		for {
 			time.Sleep(5 * time.Minute)
 
-			minPrice, maxPrice, err := GetCandleInfo(floorPriceFile)
+			minPrice, maxPrice, err := GetCandleInfoFromArray(floorPriceFile)
 			if err != nil {
 				log.Printf("Ошибка при нахождении min и max значений: %v", err)
 				continue
@@ -124,7 +122,7 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 		for {
 			time.Sleep(1 * time.Hour)
 
-			minPrice, maxPrice, err := GetCandleInfo(floorPriceFile)
+			minPrice, maxPrice, err := GetCandleInfoFromArray(floorPriceFile)
 			if err != nil {
 				log.Printf("Ошибка при нахождении min и max значений: %v", err)
 				continue
@@ -155,8 +153,6 @@ func WriteCandleToDB(dbPool *pgxpool.Pool, candle CandleData, address, timeframe
 	if err != nil {
 		return err
 	}
-
-	// Запрос на создание таблицы, если она не существует
 	createTableQuery := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS %s (
 		openTime BIGINT NOT NULL,
@@ -172,7 +168,6 @@ func WriteCandleToDB(dbPool *pgxpool.Pool, candle CandleData, address, timeframe
 		return fmt.Errorf("ошибка создания таблицы: %v", err)
 	}
 
-	// Запрос на вставку новых данных
 	insertQuery := fmt.Sprintf(`
 	INSERT INTO %s (openTime, closeTime, lowPrice, highPrice, open, close)
 	VALUES ($1, $2, $3, $4, $5, $6);`, tableName)
@@ -188,27 +183,29 @@ func WriteCandleToDB(dbPool *pgxpool.Pool, candle CandleData, address, timeframe
 	return nil
 }
 
-func GetCandleInfo(fileName string) (float64, float64, error) {
-	file, err := os.OpenFile(fileName, os.O_RDONLY, 0644)
-	if err != nil {
-		return 0, 0, err
-	}
-	defer file.Close()
+func GetCandleInfoFromArray(arrayName string) (float64, float64, error) {
+	var floorPriceArray []FloorPriceData
 
-	var data []map[string]interface{}
-	if err := json.NewDecoder(file).Decode(&data); err != nil {
-		return 0, 0, err
+	switch arrayName {
+	case "telegramUsernamesFloorPriceArray":
+		floorPriceArray = telegramUsernamesFloorPriceArray
+	case "anonymousTelegramNumbersPriceArray":
+		floorPriceArray = anonymousTelegramNumbersPriceArray
+	case "tONDNSDomainsPriceArray":
+		floorPriceArray = tONDNSDomainsPriceArray
+	default:
+		return 0, 0, fmt.Errorf("неизвестное имя массива: %s", arrayName)
 	}
 
-	if len(data) == 0 {
+	if len(floorPriceArray) == 0 {
 		return 0, 0, fmt.Errorf("данные отсутствуют")
 	}
 
-	minPrice := data[0]["floorPrice"].(float64)
-	maxPrice := data[0]["floorPrice"].(float64)
+	minPrice := floorPriceArray[0].FloorPrice
+	maxPrice := floorPriceArray[0].FloorPrice
 
-	for _, entry := range data {
-		price := entry["floorPrice"].(float64)
+	for _, entry := range floorPriceArray {
+		price := entry.FloorPrice
 		if price < minPrice {
 			minPrice = price
 		}

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -22,6 +21,10 @@ type FloorPriceData struct {
 	FloorPrice float64 `json:"floorPrice"`
 	Address    string  `json:"address"`
 }
+
+var telegramUsernamesFloorPriceArray []FloorPriceData
+var anonymousTelegramNumbersPriceArray []FloorPriceData
+var tONDNSDomainsPriceArray []FloorPriceData
 
 func GetNFTCollectionFloor(nftCollectionAddress string) (float64, error) {
 	query := `query AlphaNftCollectionStats($address: String!) { alphaNftCollectionStats(address: $address) { floorPrice } }`
@@ -56,57 +59,21 @@ func GetNFTCollectionFloor(nftCollectionAddress string) (float64, error) {
 	return floorPriceResp.Data.AlphaNftCollectionStats.FloorPrice, nil
 }
 
-func WriteFloorToFile(floorPrice float64, address string, fileName string) error {
+func WriteFloorToArray(floorPrice float64, address string, arrayName string) error {
 	newData := FloorPriceData{
 		Time:       time.Now().Format("2006-01-02 15:04:05"),
 		FloorPrice: floorPrice,
 		Address:    address,
 	}
-
-	var data []FloorPriceData
-
-	file, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	fileInfo, err := file.Stat()
-	if err != nil {
-		return err
-	}
-
-	if fileInfo.Size() > 0 {
-		var buf bytes.Buffer
-		if _, err := buf.ReadFrom(file); err != nil {
-			return err
-		}
-
-		if buf.Bytes()[0] == '{' {
-			var singleData FloorPriceData
-			if err := json.Unmarshal(buf.Bytes(), &singleData); err != nil {
-				return err
-			}
-			data = append(data, singleData)
-		} else {
-			if err := json.Unmarshal(buf.Bytes(), &data); err != nil {
-				return err
-			}
-		}
-	}
-
-	data = append(data, newData)
-
-	file, err = os.OpenFile(fileName, os.O_TRUNC|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(data); err != nil {
-		return err
+	switch arrayName {
+	case "telegramUsernamesFloorPriceArray":
+		telegramUsernamesFloorPriceArray = append(telegramUsernamesFloorPriceArray, newData)
+	case "anonymousTelegramNumbersPriceArray":
+		anonymousTelegramNumbersPriceArray = append(anonymousTelegramNumbersPriceArray, newData)
+	case "tONDNSDomainsPriceArray":
+		tONDNSDomainsPriceArray = append(tONDNSDomainsPriceArray, newData)
+	default:
+		return fmt.Errorf("неизвестное имя массива: %s", arrayName)
 	}
 
 	return nil
