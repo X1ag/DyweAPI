@@ -52,18 +52,18 @@ func getTableName(address, timeframe string) (string, error) {
 	return "", fmt.Errorf("неизвестный адрес: %s", address)
 }
 
-func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr string, candleData5Min, candleData1Hr *CandleData) {
+func UpdateCandleData(address, floorPriceArray5m, floorPriceArray1h string, candleData5Min, candleData1Hr *CandleData) {
 	var openPrice5Min, openPrice1Hr, closePrice5Min, closePrice1Hr float64
 	var openTime5Min, openTime1Hr time.Time
 
 	ctx := context.Background()
-
 	dbPool, err := db.NewClient(ctx, 3, db.DefaultStorageConfig)
 	if err != nil {
 		log.Fatalf("Ошибка при создании пула соединений: %v", err)
 	}
 
 	go func() {
+		WaitUntilNextInterval(5 * time.Minute)
 		for {
 			floorPrice, err := GetNFTCollectionFloor(address)
 			if err != nil {
@@ -81,8 +81,12 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 				}
 				closePrice1Hr = floorPrice
 
-				if err := WriteFloorToArray(floorPrice, address, floorPriceFile); err != nil {
-					log.Printf("Ошибка при записи в массив: %v", err)
+				if err := WriteFloorToArray(floorPrice, address, floorPriceArray5m); err != nil {
+					log.Printf("Ошибка при записи в 5-минутный массив: %v", err)
+				}
+
+				if err := WriteFloorToArray(floorPrice, address, floorPriceArray1h); err != nil {
+					log.Printf("Ошибка при записи в 1-часовой массив: %v", err)
 				}
 			}
 			time.Sleep(20 * time.Second)
@@ -90,15 +94,14 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 	}()
 
 	go func() {
+		WaitUntilNextInterval(5 * time.Minute)
 		for {
 			time.Sleep(5 * time.Minute)
-
-			minPrice, maxPrice, err := GetCandleInfoFromArray(floorPriceFile)
+			minPrice, maxPrice, err := GetCandleInfoFromArray(floorPriceArray5m)
 			if err != nil {
 				log.Printf("Ошибка при нахождении min и max значений: %v", err)
 				continue
 			}
-
 			*candleData5Min = CandleData{
 				OpenTime:  openTime5Min.Unix(),
 				CloseTime: time.Now().Unix(),
@@ -107,27 +110,27 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 				Open:      openPrice5Min,
 				Close:     closePrice5Min,
 			}
-
 			if err := WriteCandleToDB(dbPool, *candleData5Min, address, "5m"); err != nil {
-				log.Printf("Ошибка при записи данных 5минутной свечи в bd: %v", err)
+				log.Printf("Ошибка при записи данных 5-минутной свечи в базу данных: %v", err)
 			} else {
-				log.Println("Данные 5 мин свечи успешно записаны в bd")
+				log.Printf("Данные 5-минутной свечи успешно записаны в базу данных: %+v", *candleData5Min)
 			}
 
 			openPrice5Min = 0
+			closePrice5Min = 0
+			ClearArray(floorPriceArray5m)
 		}
 	}()
 
 	go func() {
+		WaitUntilNextInterval(time.Hour)
 		for {
 			time.Sleep(1 * time.Hour)
-
-			minPrice, maxPrice, err := GetCandleInfoFromArray(floorPriceFile)
+			minPrice, maxPrice, err := GetCandleInfoFromArray(floorPriceArray1h)
 			if err != nil {
 				log.Printf("Ошибка при нахождении min и max значений: %v", err)
 				continue
 			}
-
 			*candleData1Hr = CandleData{
 				OpenTime:  openTime1Hr.Unix(),
 				CloseTime: time.Now().Unix(),
@@ -136,14 +139,15 @@ func UpdateCandleData(address, floorPriceFile, candleFile5Min, candleFile1Hr str
 				Open:      openPrice1Hr,
 				Close:     closePrice1Hr,
 			}
-
 			if err := WriteCandleToDB(dbPool, *candleData1Hr, address, "1h"); err != nil {
-				log.Printf("Ошибка при записи данных часовой свечи в bd: %v", err)
+				log.Printf("Ошибка при записи данных часовой свечи в базу данных: %v", err)
 			} else {
-				log.Println("Данные часовой свечи успешно записаны в bd")
+				log.Printf("Данные часовой свечи успешно записаны в базу данных: %+v", *candleData1Hr)
 			}
 
 			openPrice1Hr = 0
+			closePrice1Hr = 0
+			ClearArray(floorPriceArray1h)
 		}
 	}()
 }
@@ -184,16 +188,17 @@ func WriteCandleToDB(dbPool *pgxpool.Pool, candle CandleData, address, timeframe
 }
 
 func GetCandleInfoFromArray(arrayName string) (float64, float64, error) {
-	var floorPriceArray []FloorPriceData
+	arrays := map[string][]FloorPriceData{
+		"telegramUsernamesFloorPriceArray5m":   telegramUsernamesFloorPriceArray5m,
+		"anonymousTelegramNumbersPriceArray5m": anonymousTelegramNumbersPriceArray5m,
+		"tONDNSDomainsPriceArray5m":            tONDNSDomainsPriceArray5m,
+		"telegramUsernamesFloorPriceArray1h":   telegramUsernamesFloorPriceArray1h,
+		"anonymousTelegramNumbersPriceArray1h": anonymousTelegramNumbersPriceArray1h,
+		"tONDNSDomainsPriceArray1h":            tONDNSDomainsPriceArray1h,
+	}
 
-	switch arrayName {
-	case "telegramUsernamesFloorPriceArray":
-		floorPriceArray = telegramUsernamesFloorPriceArray
-	case "anonymousTelegramNumbersPriceArray":
-		floorPriceArray = anonymousTelegramNumbersPriceArray
-	case "tONDNSDomainsPriceArray":
-		floorPriceArray = tONDNSDomainsPriceArray
-	default:
+	floorPriceArray, exists := arrays[arrayName]
+	if !exists {
 		return 0, 0, fmt.Errorf("неизвестное имя массива: %s", arrayName)
 	}
 
@@ -215,4 +220,36 @@ func GetCandleInfoFromArray(arrayName string) (float64, float64, error) {
 	}
 
 	return minPrice, maxPrice, nil
+}
+
+func WaitUntilNextInterval(interval time.Duration) {
+	now := time.Now()
+	var next time.Time
+
+	if interval == time.Hour {
+		next = now.Truncate(time.Hour).Add(time.Hour)
+	} else if interval == 5*time.Minute {
+		next = now.Truncate(5 * time.Minute).Add(5 * time.Minute)
+	} else {
+		next = now.Truncate(interval).Add(interval)
+	}
+
+	time.Sleep(time.Until(next))
+}
+
+func ClearArray(arrayName string) {
+	priceArrays := map[string]*[]FloorPriceData{
+		"telegramUsernamesFloorPriceArray1h":   &telegramUsernamesFloorPriceArray1h,
+		"anonymousTelegramNumbersPriceArray1h": &anonymousTelegramNumbersPriceArray1h,
+		"tONDNSDomainsPriceArray1h":            &tONDNSDomainsPriceArray1h,
+		"telegramUsernamesFloorPriceArray5m":   &telegramUsernamesFloorPriceArray5m,
+		"anonymousTelegramNumbersPriceArray5m": &anonymousTelegramNumbersPriceArray5m,
+		"tONDNSDomainsPriceArray5m":            &tONDNSDomainsPriceArray5m,
+	}
+	if arr, ok := priceArrays[arrayName]; ok {
+		*arr = nil
+		log.Printf("Массив %s очищен", arrayName)
+	} else {
+		log.Printf("Не найден массив с именем %s", arrayName)
+	}
 }

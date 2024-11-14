@@ -13,25 +13,22 @@ func main() {
 
 	go nft.UpdateCandleData(
 		nft.Telegram_Usernames_CollectionAddress,
-		"telegramUsernamesFloorPriceArray",
-		"Telegram_Usernames_candle_data_5min.json",
-		"Telegram_Usernames_candle_data_1hr.json",
+		"telegramUsernamesFloorPriceArray5m",
+		"telegramUsernamesFloorPriceArray1h",
 		&nft.СandleDataTelegramUsernames,
 		&nft.СandleDataTelegramUsernames,
 	)
 	go nft.UpdateCandleData(
 		nft.Anonymous_Telegram_Numbers_CollectionAddress,
-		"anonymousTelegramNumbersPriceArray",
-		"Anonymous_Telegram_Numbers_data_5min.json",
-		"Anonymous_Telegram_Numbers_candle_data_1hr.json",
+		"anonymousTelegramNumbersPriceArray5m",
+		"anonymousTelegramNumbersPriceArray1h",
 		&nft.СandleDataAnonymousTelegramNumbers,
 		&nft.СandleDataAnonymousTelegramNumbers,
 	)
 	go nft.UpdateCandleData(
 		nft.TON_DNSDomains_CollectionAddress,
-		"tONDNSDomainsPriceArray",
-		"TON_DNSDomains_data_5min.json",
-		"TON_DNSDomains_candle_data_1hr.json",
+		"tONDNSDomainsPriceArray5m",
+		"tONDNSDomainsPriceArray1h",
 		&nft.СandleDataTONDNSDomains,
 		&nft.СandleDataTONDNSDomains,
 	)
