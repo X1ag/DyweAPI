@@ -38,6 +38,7 @@ func main() {
 	r.Get("/dywetrading/getAllHistory/{address}/{timeframe}", handlers.HandleCandleData)
 	r.Get("/dywetrading/getCollectionInfo/{address}", handlers.CollectionInfoHandler)
 	r.Get("/dywetrading/getFloor/{address}", handlers.CollectiongetFloor)
+	r.Get("/dywetrading/ws", handlers.HandleWebSocketCandleData)
 
 	http.ListenAndServe(":5000", r)
 }
