@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-var UpdateChan = make(chan string) // Канал для уведомления об изменениях
+var UpdateChan = make(chan string)
 
 type CandleData struct {
 	OpenTime  int64   `json:"openTime"`
@@ -186,7 +186,6 @@ func WriteCandleToDB(dbPool *pgxpool.Pool, candle CandleData, address, timeframe
 		return fmt.Errorf("ошибка вставки данных: %v", err)
 	}
 
-	// // Уведомляем канал об обновлении(передаем address и timeframe)
 	UpdateChan <- fmt.Sprintf("%s:%s", address, timeframe)
 
 	return nil
