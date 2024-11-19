@@ -11,6 +11,12 @@ import (
 
 func main() {
 
+	go nft.UpdateRealTimeCandle(
+		nft.Telegram_Usernames_CollectionAddress,
+		"telegramUsernamesFloorPriceArray5m",
+		&nft.СandleDataTelegramUsernames,
+	)
+
 	go nft.UpdateCandleData(
 		nft.Telegram_Usernames_CollectionAddress,
 		"telegramUsernamesFloorPriceArray5m",
