@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 )
 
 type FloorPriceResponse struct {
@@ -64,9 +63,7 @@ func GetNFTCollectionFloor(nftCollectionAddress string) (float64, error) {
 
 func WriteFloorToArray(floorPrice float64, address string, arrayName string) error {
 	newData := FloorPriceData{
-		Time:       time.Now().Format("2006-01-02 15:04:05"),
 		FloorPrice: floorPrice,
-		Address:    address,
 	}
 
 	arrays := map[string]*[]FloorPriceData{
@@ -82,6 +79,5 @@ func WriteFloorToArray(floorPrice float64, address string, arrayName string) err
 		*array = append(*array, newData)
 		return nil
 	}
-
 	return fmt.Errorf("неизвестное имя массива: %s", arrayName)
 }

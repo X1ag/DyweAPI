@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"prod/internal/handlers"
 	"prod/internal/nft"
@@ -10,10 +11,18 @@ import (
 )
 
 func main() {
+	go nft.UpdateRealTimeCandle(
+		"telegramUsernamesFloorPriceArray5m",
+		&nft.СandleDataTelegramUsernames,
+	)
 
 	go nft.UpdateRealTimeCandle(
-		nft.Telegram_Usernames_CollectionAddress,
-		"telegramUsernamesFloorPriceArray5m",
+		"anonymousTelegramNumbersPriceArray5m",
+		&nft.СandleDataTelegramUsernames,
+	)
+
+	go nft.UpdateRealTimeCandle(
+		"tONDNSDomainsPriceArray5m",
 		&nft.СandleDataTelegramUsernames,
 	)
 
@@ -39,12 +48,16 @@ func main() {
 		&nft.СandleDataTONDNSDomains,
 	)
 
+	fmt.Println("ОЖИДАНИЕ НАЧАЛА ПЯТИМИНУТНОГО ИНТЕРВАЛА")
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Get("/dywetrading/getAllHistory/{address}/{timeframe}", handlers.HandleCandleData)
 	r.Get("/dywetrading/getCollectionInfo/{address}", handlers.CollectionInfoHandler)
 	r.Get("/dywetrading/getFloor/{address}", handlers.CollectiongetFloor)
-	r.Get("/dywetrading/ws", handlers.HandleWebSocketCandleData)
+	r.Get("/dywetrading/ws/{name}", handlers.HandleWebSocketCandleData)
 
 	http.ListenAndServe(":5000", r)
+
+	fmt.Println("Ожидание начала пятиминутного интервала")
 }

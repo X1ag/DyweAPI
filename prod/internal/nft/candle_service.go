@@ -10,8 +10,6 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-var UpdateChan = make(chan string)
-
 type CandleData struct {
 	OpenTime  int64   `json:"openTime"`
 	CloseTime int64   `json:"closeTime"`
@@ -71,6 +69,8 @@ func UpdateCandleData(address, floorPriceArray5m, floorPriceArray1h string, cand
 			if err != nil {
 				log.Printf("Ошибка при получении floor price: %v", err)
 			} else {
+				log.Printf("Получен floor price для коллекции %s: %f", address, floorPrice)
+
 				if openPrice5Min == 0 {
 					openPrice5Min = floorPrice
 					openTime5Min = time.Now()
@@ -185,8 +185,6 @@ func WriteCandleToDB(dbPool *pgxpool.Pool, candle CandleData, address, timeframe
 	if err != nil {
 		return fmt.Errorf("ошибка вставки данных: %v", err)
 	}
-
-	UpdateChan <- fmt.Sprintf("%s:%s", address, timeframe)
 
 	return nil
 }
