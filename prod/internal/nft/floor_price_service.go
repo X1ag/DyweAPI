@@ -27,6 +27,15 @@ var tONDNSDomainsPriceArray1h []FloorPriceData
 var telegramUsernamesFloorPriceArray5m []FloorPriceData
 var anonymousTelegramNumbersPriceArray5m []FloorPriceData
 var tONDNSDomainsPriceArray5m []FloorPriceData
+var telegramUsernamesFloorPriceArray15m []FloorPriceData
+var anonymousTelegramNumbersPriceArray15m []FloorPriceData
+var tONDNSDomainsPriceArray15m []FloorPriceData
+var telegramUsernamesFloorPriceArray30m []FloorPriceData
+var anonymousTelegramNumbersPriceArray30m []FloorPriceData
+var tONDNSDomainsPriceArray30m []FloorPriceData
+var telegramUsernamesFloorPriceArray4h []FloorPriceData
+var anonymousTelegramNumbersPriceArray4h []FloorPriceData
+var tONDNSDomainsPriceArray4h []FloorPriceData
 
 func GetNFTCollectionFloor(nftCollectionAddress string) (float64, error) {
 	query := `query AlphaNftCollectionStats($address: String!) { alphaNftCollectionStats(address: $address) { floorPrice } }`
@@ -67,12 +76,21 @@ func WriteFloorToArray(floorPrice float64, address string, arrayName string) err
 	}
 
 	arrays := map[string]*[]FloorPriceData{
-		"telegramUsernamesFloorPriceArray5m":   &telegramUsernamesFloorPriceArray5m,
-		"anonymousTelegramNumbersPriceArray5m": &anonymousTelegramNumbersPriceArray5m,
-		"tONDNSDomainsPriceArray5m":            &tONDNSDomainsPriceArray5m,
-		"telegramUsernamesFloorPriceArray1h":   &telegramUsernamesFloorPriceArray1h,
-		"anonymousTelegramNumbersPriceArray1h": &anonymousTelegramNumbersPriceArray1h,
-		"tONDNSDomainsPriceArray1h":            &tONDNSDomainsPriceArray1h,
+		"telegramUsernamesFloorPriceArray5m":    &telegramUsernamesFloorPriceArray5m,
+		"anonymousTelegramNumbersPriceArray5m":  &anonymousTelegramNumbersPriceArray5m,
+		"tONDNSDomainsPriceArray5m":             &tONDNSDomainsPriceArray5m,
+		"telegramUsernamesFloorPriceArray1h":    &telegramUsernamesFloorPriceArray1h,
+		"anonymousTelegramNumbersPriceArray1h":  &anonymousTelegramNumbersPriceArray1h,
+		"tONDNSDomainsPriceArray1h":             &tONDNSDomainsPriceArray1h,
+		"telegramUsernamesFloorPriceArray15m":   &telegramUsernamesFloorPriceArray15m,
+		"anonymousTelegramNumbersPriceArray15m": &anonymousTelegramNumbersPriceArray15m,
+		"tONDNSDomainsPriceArray15m":            &tONDNSDomainsPriceArray15m,
+		"telegramUsernamesFloorPriceArray30m":   &telegramUsernamesFloorPriceArray30m,
+		"anonymousTelegramNumbersPriceArray30m": &anonymousTelegramNumbersPriceArray30m,
+		"tONDNSDomainsPriceArray30m":            &tONDNSDomainsPriceArray30m,
+		"telegramUsernamesFloorPriceArray4h":    &telegramUsernamesFloorPriceArray4h,
+		"anonymousTelegramNumbersPriceArray4h":  &anonymousTelegramNumbersPriceArray4h,
+		"tONDNSDomainsPriceArray4h":             &tONDNSDomainsPriceArray4h,
 	}
 
 	if array, exists := arrays[arrayName]; exists {

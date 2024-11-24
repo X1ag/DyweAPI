@@ -52,7 +52,7 @@ func getTableName(address, timeframe string) (string, error) {
 	return "", fmt.Errorf("неизвестный адрес: %s", address)
 }
 
-func UpdateCandleData(address, floorPriceArray5m, floorPriceArray1h string, candleData5Min, candleData1Hr *CandleData) {
+func UpdateCandleData(address, floorPriceArray5m, floorPriceArray1h, floorPriceArray15m, floorPriceArray30m, floorPriceArray4h string, candleData5Min, candleData1Hr *CandleData) {
 	var openPrice5Min, openPrice1Hr, closePrice5Min, closePrice1Hr float64
 	var openTime5Min, openTime1Hr time.Time
 
@@ -90,6 +90,18 @@ func UpdateCandleData(address, floorPriceArray5m, floorPriceArray1h string, cand
 				if err := WriteFloorToArray(floorPrice, address, floorPriceArray1h); err != nil {
 					log.Printf("Ошибка при записи в 1-часовой массив: %v", err)
 				}
+
+				if err := WriteFloorToArray(floorPrice, address, floorPriceArray15m); err != nil {
+					log.Printf("Ошибка при записи в 15-минутный массив: %v", err)
+				}
+
+				if err := WriteFloorToArray(floorPrice, address, floorPriceArray30m); err != nil {
+					log.Printf("Ошибка при записи в 30-минутный массив: %v", err)
+				}
+
+				if err := WriteFloorToArray(floorPrice, address, floorPriceArray4h); err != nil {
+					log.Printf("Ошибка при записи в 4-часовой массив: %v", err)
+				}
 			}
 			time.Sleep(20 * time.Second)
 		}
@@ -126,6 +138,7 @@ func UpdateCandleData(address, floorPriceArray5m, floorPriceArray1h string, cand
 
 	go func() {
 		WaitUntilNextInterval(time.Hour)
+		ClearArray(floorPriceArray1h)
 		for {
 			time.Sleep(1 * time.Hour)
 			minPrice, maxPrice, err := GetCandleInfoFromArray(floorPriceArray1h)
@@ -241,12 +254,15 @@ func WaitUntilNextInterval(interval time.Duration) {
 
 func ClearArray(arrayName string) {
 	priceArrays := map[string]*[]FloorPriceData{
-		"telegramUsernamesFloorPriceArray1h":   &telegramUsernamesFloorPriceArray1h,
-		"anonymousTelegramNumbersPriceArray1h": &anonymousTelegramNumbersPriceArray1h,
-		"tONDNSDomainsPriceArray1h":            &tONDNSDomainsPriceArray1h,
-		"telegramUsernamesFloorPriceArray5m":   &telegramUsernamesFloorPriceArray5m,
-		"anonymousTelegramNumbersPriceArray5m": &anonymousTelegramNumbersPriceArray5m,
-		"tONDNSDomainsPriceArray5m":            &tONDNSDomainsPriceArray5m,
+		"telegramUsernamesFloorPriceArray1h":    &telegramUsernamesFloorPriceArray1h,
+		"anonymousTelegramNumbersPriceArray1h":  &anonymousTelegramNumbersPriceArray1h,
+		"tONDNSDomainsPriceArray1h":             &tONDNSDomainsPriceArray1h,
+		"telegramUsernamesFloorPriceArray5m":    &telegramUsernamesFloorPriceArray5m,
+		"anonymousTelegramNumbersPriceArray5m":  &anonymousTelegramNumbersPriceArray5m,
+		"tONDNSDomainsPriceArray5m":             &tONDNSDomainsPriceArray5m,
+		"telegramUsernamesFloorPriceArray15m":   &telegramUsernamesFloorPriceArray15m,
+		"anonymousTelegramNumbersPriceArray15m": &anonymousTelegramNumbersPriceArray15m,
+		"tONDNSDomainsPriceArray15m":            &tONDNSDomainsPriceArray15m,
 	}
 	if arr, ok := priceArrays[arrayName]; ok {
 		*arr = nil

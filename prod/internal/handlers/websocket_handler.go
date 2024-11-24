@@ -13,9 +13,10 @@ import (
 )
 
 type WebSocketClient struct {
-	conn     *websocket.Conn
-	address  string
-	sendChan chan nft.CandleData
+	conn      *websocket.Conn
+	name      string
+	timeframe string // Добавляем поле для временного интервала
+	sendChan  chan nft.CandleData
 }
 
 var (
@@ -30,8 +31,10 @@ var (
 
 func HandleWebSocketCandleData(w http.ResponseWriter, r *http.Request) {
 	collection := chi.URLParam(r, "name")
-	log.Printf("Подключение для коллекции: %s", collection)
+	timeframe := chi.URLParam(r, "timeframe")
+	log.Printf("Подключение для коллекции: %s с временным интервалом: %s", collection, timeframe)
 
+	// Устанавливаем соединение WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Ошибка при подключении через WebSocket: %v", err), http.StatusInternalServerError)
@@ -39,16 +42,20 @@ func HandleWebSocketCandleData(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
+	// Создаем нового клиента с учетом временного интервала
 	client := &WebSocketClient{
-		conn:     conn,
-		address:  collection,
-		sendChan: make(chan nft.CandleData),
+		conn:      conn,
+		name:      collection,
+		timeframe: timeframe, // Сохраняем временной интервал
+		sendChan:  make(chan nft.CandleData),
 	}
 
+	// Добавляем клиента в список
 	clientsMutex.Lock()
 	clients[client] = true
 	clientsMutex.Unlock()
 
+	// Горутинка для отправки данных клиенту
 	go func() {
 		defer func() {
 			clientsMutex.Lock()
@@ -64,11 +71,13 @@ func HandleWebSocketCandleData(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	// Цикл получения данных с канала
 	for {
 		select {
-		case candleData := <-getCandleDataChannel(collection):
-			log.Printf("Данные успешно получены из канала для коллекции %s: %+v", collection, candleData)
+		case candleData := <-getCandleDataChannel(collection, timeframe):
+			log.Printf("Данные успешно получены из канала для коллекции %s и интервала %s: %+v", collection, timeframe, candleData)
 
+			// Отправка данных клиенту через WebSocket
 			select {
 			case client.sendChan <- candleData:
 				log.Printf("Данные отправлены клиенту %s", collection)
@@ -83,16 +92,59 @@ func HandleWebSocketCandleData(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getCandleDataChannel(collection string) chan nft.CandleData {
+func getCandleDataChannel(collection, timeframe string) chan nft.CandleData {
+	// Выбираем канал в зависимости от временного интервала
 	switch collection {
 	case "telegramUsernames":
-		return nft.СollectionChannelstelegramUsernamesFloorPriceArray5m
+		switch timeframe {
+		case "1h":
+			return nft.СollectionChannelstelegramUsernamesFloorPriceArray1h
+		case "5m":
+			return nft.СollectionChannelstelegramUsernamesFloorPriceArray5m
+		case "15m":
+			return nft.СollectionChannelstelegramUsernamesFloorPriceArray15m
+		case "30m":
+			return nft.СollectionChannelstelegramUsernamesFloorPriceArray30m
+		case "4h":
+			return nft.СollectionChannelstelegramUsernamesFloorPriceArray4h
+		default:
+			log.Printf("Неизвестный временной интервал %s для коллекции %s", timeframe, collection)
+			return nil
+		}
 	case "anonymousTelegramNumbers":
-		return nft.СollectionChannelsanonymousTelegramNumbersPriceArray5m
+		switch timeframe {
+		case "1h":
+			return nft.СollectionChannelsanonymousTelegramNumbersPriceArray1h
+		case "5m":
+			return nft.СollectionChannelsanonymousTelegramNumbersPriceArray5m
+		case "15m":
+			return nft.СollectionChannelsanonymousTelegramNumbersPriceArray15m
+		case "30m":
+			return nft.СollectionChannelsanonymousTelegramNumbersPriceArray30m
+		case "4h":
+			return nft.СollectionChannelsanonymousTelegramNumbersPriceArray4h
+		default:
+			log.Printf("Неизвестный временной интервал %s для коллекции %s", timeframe, collection)
+			return nil
+		}
 	case "tONDNSDomains":
-		return nft.СollectionChannelstONDNSDomainsPriceArray5m
+		switch timeframe {
+		case "1h":
+			return nft.СollectionChannelstONDNSDomainsPriceArray1h
+		case "5m":
+			return nft.СollectionChannelstONDNSDomainsPriceArray5m
+		case "15m":
+			return nft.СollectionChannelstONDNSDomainsPriceArray15m
+		case "30m":
+			return nft.СollectionChannelstONDNSDomainsPriceArray30m
+		case "4h":
+			return nft.СollectionChannelstONDNSDomainsPriceArray4h
+		default:
+			log.Printf("Неизвестный временной интервал %s для коллекции %s", timeframe, collection)
+			return nil
+		}
 	default:
-		log.Printf("Неизвестная колzzлекция: %s", collection)
+		log.Printf("Неизвестная коллекция: %s", collection)
 		return nil
 	}
 }
